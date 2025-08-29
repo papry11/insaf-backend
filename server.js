@@ -82,7 +82,7 @@ connectCloudinary()
 // Middlewares
 app.use(express.json());
 app.use(cors({
-    origin: ["https://insaafbd.com"],
+    origin: ["https://insaffbd.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }));

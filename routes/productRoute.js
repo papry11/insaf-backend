@@ -2,6 +2,7 @@ import express from 'express';
 import { listProducts, addProduct, singleProduct, removeProduct } from '../controllers/productController.js';
 import upload from '../middleware/multer.js';
 import adminAuth from '../middleware/adminAuth.js';
+import { getProductById } from "../controllers/productController.js";
 
 const productRouter = express.Router();
 
@@ -21,6 +22,7 @@ productRouter.post(
 // Public Routes
 productRouter.get('/list', listProducts);
 productRouter.post('/single', singleProduct);
+productRouter.get('/:id', getProductById);
 
 // Remove Product (Admin Protected)
 productRouter.post('/remove', adminAuth, removeProduct);

@@ -105,4 +105,16 @@ const singleProduct = async (req, res) => {
     }
 };
 
-export { listProducts, addProduct, singleProduct, removeProduct };
+const getProductById = async (req, res) => {
+  try {
+    const product = await productModel.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { listProducts, addProduct, singleProduct, removeProduct , getProductById };

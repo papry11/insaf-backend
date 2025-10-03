@@ -347,7 +347,7 @@ const placeOrder = async (req, res) => {
       userType: "User",
       items: orderItems,
       address,
-      amount: totalProductPrice,   // ✅ এখানে শুধু product price (delivery charge চাইলে আলাদা যোগ করুন)
+      amount: totalProductPrice,   
       trackingId,
       paymentMethod: "COD",
       payment: false,

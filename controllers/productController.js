@@ -4,10 +4,10 @@ import productModel from '../models/productModels.js';
 // Product add function
 const addProduct = async (req, res) => {
     try {
-        const { name, description, price, category, subCategory, sizes, bestseller } = req.body;
+        const { name, description, price, category, sizes, bestseller } = req.body;
 
         // Check required fields
-        if (!name || !description || !price || !category || !subCategory || !sizes) {
+        if (!name || !description || !price || !category || !sizes) {
             return res.json({ success: false, message: "All fields are required." });
         }
 
@@ -43,7 +43,6 @@ const addProduct = async (req, res) => {
             name,
             description,
             category,
-            subCategory,
             price: Number(price),
             bestseller: bestseller === "true",
             sizes: parsedSizes,

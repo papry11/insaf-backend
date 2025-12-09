@@ -11,82 +11,73 @@ import { v4 as uuidv4 } from "uuid";
 // // ✅ Place Guest Order
 // // ===============================
 
-
 const placeGuestOrder = async (req, res) => {
   try {
-    const { fullName, phone, alternatePhone, fullAddress, items, orderToken } = req.body;
-    const deliveryCharge = req.body.shippingCharge || req.body.deliveryCharge || 0;
+    const { fullName, phone, alternatePhone, fullAddress, items, deliveryCharge, orderToken } = req.body;
 
     if (!fullName || !phone || !fullAddress || !items || !orderToken) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // 🔹 Check duplicate order
-    const existingOrder = await Order.findOne({ orderToken });
-    if (existingOrder) {
-      return res.status(400).json({ success: false, message: "Duplicate order detected" });
+    // Prevent duplicate orders
+    const exists = await Order.findOne({ orderToken });
+    if (exists) {
+      return res.status(400).json({ success: false, message: "Duplicate order" });
     }
 
-    // 🔹 Calculate product total
     let totalProductPrice = 0;
-    for (const item of items) {
-      const product = await Product.findById(item.productId).select("price");
-      if (product) totalProductPrice += product.price * (item.quantity || 1);
-    }
 
-    const finalAmount = totalProductPrice + deliveryCharge;
-
-    // 🔹 Create guest user
-    const guestUser = await GuestUser.create({ fullName, phone, fullAddress, alternatePhone });
-
-    const trackingId = uuidv4();
-
-    // 🔹 Prepare items
     const orderItems = await Promise.all(
       items.map(async (item) => {
         const product = await Product.findById(item.productId).select("image name price");
-        let productImage = "";
-        if (product) productImage = Array.isArray(product.image) ? product.image[0] : product.image;
+
+        const productImages = Array.isArray(product.image)
+          ? product.image
+          : [product.image];
+
+        totalProductPrice += product.price * item.quantity;
 
         return {
           product: item.productId,
-          name: product ? product.name : item.name,
-          price: product ? product.price : item.price,
-          quantity: item.quantity || 1,
+          name: product.name,
+          price: product.price,
+          quantity: item.quantity,
           size: item.size,
-          image: productImage,
+          image: productImages   // ✔ ALWAYS ARRAY
         };
       })
     );
 
-    // 🔹 Save order with alternatePhone
+    const guestUser = await GuestUser.create({
+      fullName,
+      phone,
+      alternatePhone,
+      fullAddress
+    });
+
+    const trackingId = uuidv4();
+    const finalAmount = totalProductPrice + (deliveryCharge || 0);
+
     const order = await Order.create({
       user: guestUser._id,
       userType: "GuestUser",
       items: orderItems,
-      address: { 
-        fullName, 
-        phone, 
-        alternatePhone: alternatePhone || "", // ✅ added
-        fullAddress 
-      },
+      address: { fullName, phone, alternatePhone, fullAddress },
       note: req.body.note || "",
       amount: finalAmount,
+      deliveryCharge,
       trackingId,
       paymentMethod: "COD",
-      payment: false,
-      status: "Pending",
-      orderToken // ✅ store token
+      orderToken
     });
 
     res.status(201).json({ success: true, trackingId, order });
 
-  } catch (error) {
-    console.error("Guest Order Error:", error.message);
+  } catch (err) {
+    console.log("Guest Order Error:", err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-
 
 
 // ===============================
@@ -117,57 +108,42 @@ const trackOrder = async (req, res) => {
 const placeOrder = async (req, res) => {
   try {
     const { items, address } = req.body;
+    const userId = req.userId;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: "No items in the order" });
-    }
+    let totalProductPrice = 0;
 
-    const userId = req.userId || null;
-
-    // 🛒 Prepare items
     const orderItems = await Promise.all(
       items.map(async (item) => {
         const product = await Product.findById(item.productId).select("image name price");
 
-        let productImage = "";
-        if (product) {
-          if (Array.isArray(product.image)) {
-            productImage = product.image[0];
-          } else {
-            productImage = product.image;
-          }
-        }
+        const productImages = Array.isArray(product.image)
+          ? product.image
+          : [product.image];
+
+        totalProductPrice += product.price * item.quantity;
 
         return {
           product: item.productId,
-          name: product ? product.name : item.name,
-          price: product ? product.price : item.price,
-          quantity: item.quantity || item.qty || 1,
+          name: product.name,
+          price: product.price,
+          quantity: item.quantity,
           size: item.size,
-          image: productImage,
+          image: productImages     // ✔ ALWAYS ARRAY
         };
       })
     );
 
-    // 🛒 Calculate total
-    let totalProductPrice = 0;
-    orderItems.forEach(item => {
-      totalProductPrice += item.price * item.quantity;
-    });
-
     const trackingId = uuidv4();
 
-    // 🛒 Save order
     const order = await Order.create({
       user: userId,
       userType: "User",
       items: orderItems,
       address,
       amount: totalProductPrice,
-      trackingId,
       paymentMethod: "COD",
-      payment: false,
-      status: "Pending",
+      trackingId,
+      status: "Pending"
     });
 
     res.status(201).json({ success: true, trackingId, order });

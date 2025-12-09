@@ -8,7 +8,7 @@ const orderRouter = express.Router()
 
 //  admin features 
 
-orderRouter.post('/list', adminAuth, allOrders)
+orderRouter.post('/list', allOrders)
 orderRouter.post('/status', adminAuth, updateStatus)
 
 
